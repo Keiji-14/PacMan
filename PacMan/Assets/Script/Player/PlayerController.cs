@@ -12,6 +12,8 @@ namespace Player
         #region SerializeField
         /// <summary>移動速度</summary>
         [SerializeField] private float speed;
+        /// <summary>重力</summary>
+        [SerializeField] private float gravity;
         [Header("Component")]
         /// <summary>アニメーター</summary>
         [SerializeField] private Animator animator;
@@ -34,9 +36,12 @@ namespace Player
             float moveX = Input.GetAxis("Horizontal");
             float moveZ = Input.GetAxis("Vertical");
 
+            // プレイヤーの移動
             Vector3 move = transform.right * moveX + transform.forward * moveZ;
             characterController.Move(move * speed * Time.deltaTime);
 
+            // 重力
+            velocity.y += gravity * Time.deltaTime;
             characterController.Move(velocity * Time.deltaTime);
         }
     }
