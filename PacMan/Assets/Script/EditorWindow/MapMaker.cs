@@ -34,15 +34,15 @@ public class MapMaker : EditorWindow
 
     void OnGUI()
     {
-        stageTransform = (Transform)EditorGUILayout.ObjectField("ステージ:", stageTransform, typeof(Transform), true);
-        objectToGenerate = (GameObject)EditorGUILayout.ObjectField("設置オブジェクト:", objectToGenerate, typeof(GameObject), true);
+        stageTransform = (Transform)EditorGUILayout.ObjectField("ステージ", stageTransform, typeof(Transform), true);
+        objectToGenerate = (GameObject)EditorGUILayout.ObjectField("設置オブジェクト", objectToGenerate, typeof(GameObject), true);
 
         EditorGUILayout.Space();
-        gridSize = EditorGUILayout.FloatField("グリッド線:", gridSize);
-        gridRange = EditorGUILayout.FloatField("グリッド範囲:", gridRange);
+        gridSize = EditorGUILayout.FloatField("グリッド線", gridSize);
+        gridRange = EditorGUILayout.FloatField("グリッド範囲", gridRange);
 
         EditorGUILayout.Space();
-        objectScale = EditorGUILayout.Vector3Field("オブジェクトのサイズ:", objectScale);
+        DrawLinkedScaleField();
         
         EditorGUILayout.BeginHorizontal();
         // 登録と解除の切り替えボタン
@@ -51,14 +51,14 @@ public class MapMaker : EditorWindow
             if (isSetObjectMethod)
             {
                 // オブジェクト設置メソッドの解除
-                SceneView.duringSceneGui -= OnSetObjectGUI;
+                SceneView.duringSceneGui -= OnSetObject;
                 // プレビューオブジェクトを削除
                 DestroyImmediate(previewObject);
             }
             else
             {
                 // オブジェクト設置メソッドの登録
-                SceneView.duringSceneGui += OnSetObjectGUI;
+                SceneView.duringSceneGui += OnSetObject;
                 if (isDestroyObjectMethod)
                 {
                     // オブジェクト削除メソッドの解除
@@ -80,7 +80,7 @@ public class MapMaker : EditorWindow
                 SceneView.duringSceneGui += OnDestroyObjectGUI;
                 if (isSetObjectMethod)
                 {
-                    SceneView.duringSceneGui -= OnSetObjectGUI;
+                    SceneView.duringSceneGui -= OnSetObject;
                     isSetObjectMethod = !isSetObjectMethod;
                     // プレビューオブジェクトを削除
                     DestroyImmediate(previewObject);
@@ -129,10 +129,33 @@ public class MapMaker : EditorWindow
         Repaint();
     }
 
+    private void DrawLinkedScaleField()
+    {
+        EditorGUILayout.BeginHorizontal();
+        // スケールの各軸の値を表示
+        EditorGUILayout.LabelField("オブジェクトのサイズ", GUILayout.Width(150));
+
+        GUILayout.FlexibleSpace();
+        
+        // スケール入力フィールドとラベルを並べる
+        Vector3 newScale = objectScale;
+
+        GUILayout.Label("X", GUILayout.Width(12));
+        newScale.x = EditorGUILayout.FloatField(objectScale.x);
+        GUILayout.Label("Y", GUILayout.Width(12));
+        newScale.y = EditorGUILayout.FloatField(objectScale.y);
+        GUILayout.Label("Z", GUILayout.Width(12));
+        newScale.z = EditorGUILayout.FloatField(objectScale.z);
+
+        objectScale = newScale;
+
+        EditorGUILayout.EndHorizontal();
+    }
+
     /// <summary>
     /// オブジェクトを設置する処理
     /// </summary>
-    void OnSetObjectGUI(SceneView sceneView)
+    void OnSetObject(SceneView sceneView)
     {
         // グリッド線を描画
         DrawGrid();
