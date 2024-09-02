@@ -1,15 +1,21 @@
 ﻿using UnityEngine;
 using UnityEditor;
 
+/// <summary>
+/// マップ制作を行うエディターツール
+/// </summary>
 public class MapMaker : EditorWindow
 {
     #region PrivateField
+    /// <summary>Readmeの表示・非表示の判定</summary>
     private bool isShowReadme;
+    /// <summary>オブジェクト設置モードの判定</summary>
     private bool isSetObjectMethod;
+    /// <summary>オブジェクト削除モードの判定</summary>
     private bool isDestroyObjectMethod;
-    /// <summary>グリッドのサイズ</summary>
+    /// <summary>グリッド線の間隔</summary>
     private float gridSize = 2.0f;
-    /// <summary>グリッドの表示範囲</summary>
+    /// <summary>グリッド線の表示範囲</summary>
     private float gridRange = 20.0f;
     /// <summary>オブジェクトのスケール設定</summary>
     private Vector3 objectScale = Vector3.one;
@@ -28,24 +34,27 @@ public class MapMaker : EditorWindow
     [MenuItem("Window/MapMaker")]
     static void Open()
     {
+        // MapMakerウィンドウを開く
         var window = GetWindow<MapMaker>();
         window.titleContent = new GUIContent("MapMaker");
     }
 
     void OnGUI()
     {
+        // ステージと設置オブジェクトを選択するフィールドを表示
         stageTransform = (Transform)EditorGUILayout.ObjectField("ステージ", stageTransform, typeof(Transform), true);
         objectToGenerate = (GameObject)EditorGUILayout.ObjectField("設置オブジェクト", objectToGenerate, typeof(GameObject), true);
 
         EditorGUILayout.Space();
+        // グリッドサイズと範囲を設定するフィールドを表示
         gridSize = EditorGUILayout.FloatField("グリッド線", gridSize);
         gridRange = EditorGUILayout.FloatField("グリッド範囲", gridRange);
 
         EditorGUILayout.Space();
-        DrawLinkedScaleField();
+        SetObjectScaleField();
         
         EditorGUILayout.BeginHorizontal();
-        // 登録と解除の切り替えボタン
+        // オブジェクト設置モードの切り替えボタン
         if (GUILayout.Button(isSetObjectMethod ? "オブジェクト設置モード解除" : "オブジェクト設置モード"))
         {
             if (isSetObjectMethod)
@@ -66,20 +75,26 @@ public class MapMaker : EditorWindow
                     isDestroyObjectMethod = !isDestroyObjectMethod;
                 }
             }
-            
-            isSetObjectMethod = !isSetObjectMethod; // 状態を切り替え
+
+            // 設置モードの状態を切り替え
+            isSetObjectMethod = !isSetObjectMethod;
         }
+
+        // オブジェクト削除モードの切り替えボタン
         if (GUILayout.Button(isDestroyObjectMethod ? "オブジェクト削除モード解除" : "オブジェクト削除モード"))
         {
             if (isDestroyObjectMethod)
             {
+                // オブジェクト削除メソッドの解除
                 SceneView.duringSceneGui -= OnDestroyObjectGUI;
             }
             else
             {
+                // オブジェクト削除メソッドの登録
                 SceneView.duringSceneGui += OnDestroyObjectGUI;
                 if (isSetObjectMethod)
                 {
+                    // オブジェクト設置メソッドの解除
                     SceneView.duringSceneGui -= OnSetObject;
                     isSetObjectMethod = !isSetObjectMethod;
                     // プレビューオブジェクトを削除
@@ -87,7 +102,8 @@ public class MapMaker : EditorWindow
                 }
             }
         }
-        
+
+        // 削除モードの状態を切り替え
         isDestroyObjectMethod = !isDestroyObjectMethod;
 
         EditorGUILayout.EndHorizontal();
@@ -109,30 +125,31 @@ public class MapMaker : EditorWindow
         }
         EditorGUILayout.Space();
 
+        // Readmeの表示・非表示を管理
         isShowReadme = EditorGUILayout.Foldout(isShowReadme, "Readme");
         if (isShowReadme)
         {
-            EditorGUILayout.HelpBox("ここにReadmeの内容を記述します。", MessageType.None);
-
-            // ここにReadmeの具体的なコンテンツを記述します。
+            ReadmeBoxField();
         }
 
-        // プレビューオブジェクトのサイズを反映
+        // プレビューオブジェクトのサイズを更新
         UpdatePreviewObjectScale();
 
         // 画面の再描画を強制
         Repaint();
     }
 
-    private void DrawLinkedScaleField()
+    /// <summary>
+    /// オブジェクトのスケールを設定するフィールドを表示する処理
+    /// </summary>
+    private void SetObjectScaleField()
     {
         EditorGUILayout.BeginHorizontal();
-        // スケールの各軸の値を表示
         EditorGUILayout.LabelField("オブジェクトのサイズ", GUILayout.Width(150));
 
         GUILayout.FlexibleSpace();
-        
-        // スケール入力フィールドとラベルを並べる
+
+        // スケールの各軸の値を入力するフィールドを表示
         Vector3 newScale = objectScale;
 
         GUILayout.Label("X", GUILayout.Width(12));
@@ -142,6 +159,7 @@ public class MapMaker : EditorWindow
         GUILayout.Label("Z", GUILayout.Width(12));
         newScale.z = EditorGUILayout.FloatField(objectScale.z);
 
+        // 新しいスケール値を設定
         objectScale = newScale;
 
         EditorGUILayout.EndHorizontal();
@@ -150,6 +168,7 @@ public class MapMaker : EditorWindow
     /// <summary>
     /// オブジェクトを設置する処理
     /// </summary>
+    /// <param name="sceneView">現在のシーンビュー</param>
     void OnSetObject(SceneView sceneView)
     {
         // グリッド線を描画
@@ -157,14 +176,14 @@ public class MapMaker : EditorWindow
         SetObjectRotation();
         SetPreviewPosition(sceneView);
         
-        // クリック位置をグリッドに合わせて計算
+        // クリック位置を基にレイを計算
         Vector3 mousePosition = Event.current.mousePosition;
         Ray ray = HandleUtility.GUIPointToWorldRay(mousePosition);
 
         if (Physics.Raycast(ray, out RaycastHit hitInfo))
         {
+            // レイがヒットした位置をグリッドに合わせて計算
             objectPlacementPosition = hitInfo.point + hitInfo.normal * 0.5f;
-
             objectPlacementPosition.x = Mathf.Floor(objectPlacementPosition.x / gridSize) * gridSize + gridSize;
             objectPlacementPosition.y = 0.0f;
             objectPlacementPosition.z = Mathf.Floor(objectPlacementPosition.z / gridSize) * gridSize + gridSize;
@@ -178,6 +197,7 @@ public class MapMaker : EditorWindow
                 GameObject newObject = Instantiate(objectToGenerate, objectPlacementPosition, objectPlacementRotation, stageTransform);
                 // サイズを設定
                 newObject.transform.localScale = objectScale;
+                // Undo操作の登録
                 Undo.RegisterCreatedObjectUndo(newObject, "Place Object");
                 Event.current.Use();
             }
@@ -189,23 +209,22 @@ public class MapMaker : EditorWindow
     /// </summary>
     private void SetObjectRotation()
     {
-        var currentRotation = objectPlacementRotation;
-
+        // オブジェクト設置モードかつキー入力がある場合の処理
         if (isSetObjectMethod && Event.current.type == EventType.KeyDown)
         {
+            // Aキーでオブジェクトを左回転させる
             if (Event.current.keyCode == KeyCode.A)
             {
                 objectPlacementRotation *= Quaternion.Euler(0f, -90f, 0f);
                 Event.current.Use();
             }
-
+            // Dキーでオブジェクトを右回転させる
             if (Event.current.keyCode == KeyCode.D)
             {
                 objectPlacementRotation *= Quaternion.Euler(0f, 90f, 0f);
                 Event.current.Use();
             }
-
-            // 回転を適用
+            // プレビューオブジェクトにも回転を適用
             if (previewObject != null)
             {
                 previewObject.transform.rotation = objectPlacementRotation;
@@ -216,24 +235,24 @@ public class MapMaker : EditorWindow
     /// <summary>
     /// 配置する位置にプレビュー表示で可視化する処理
     /// </summary>
+    /// <param name="position">プレビューオブジェクトの位置</param>
+    /// <param name="quaternion">プレビューオブジェクトの回転</param>
     private void SetPreviewObject(Vector3 position, Quaternion quaternion)
     {
+        // 既存のプレビューオブジェクトが異なる場合、古いプレビューを削除
         if (previewObject != null && previewObject.name != objectToGenerate.name + "(Clone)")
         {
-            // 古いプレビューオブジェクトを削除
             DestroyImmediate(previewObject);
             previewObject = null;
         }
-
         // プレビューオブジェクトがまだ生成されていない場合、新しいものを生成
         if (previewObject == null && objectToGenerate != null)
         {
             previewObject = Instantiate(objectToGenerate, position, quaternion);
             previewObject.name = objectToGenerate.name + "(Clone)";
-            previewObject.hideFlags = HideFlags.HideAndDontSave;
             previewObject.transform.localScale = objectScale;
         }
-
+        // プレビューオブジェクトが存在する場合、位置と回転を更新
         if (previewObject != null)
         {
             previewObject.transform.position = position;
@@ -253,6 +272,10 @@ public class MapMaker : EditorWindow
         }
     }
 
+    /// <summary>
+    /// プレビューオブジェクトの位置と回転情報をシーンビューに表示する処理
+    /// </summary>
+    /// <param name="sceneView">現在のシーンビュー</param>
     private void SetPreviewPosition(SceneView sceneView)
     {
         // 座標確認UIの位置を右下に指定
@@ -281,28 +304,9 @@ public class MapMaker : EditorWindow
     }
 
     /// <summary>
-    /// オブジェクトの重なりを確認する処理
-    /// </summary>
-    private bool CheckObjectOverlap(Vector3 position)
-    {
-        Collider[] colliders = Physics.OverlapSphere(position, gridSize / 2f);
-
-        foreach (var collider in colliders)
-        {
-            if (collider.gameObject != objectToGenerate && collider.gameObject != stageTransform.gameObject)
-            {
-                // 他のオブジェクトと重なっている場合は true を返す
-                return true; 
-            }
-        }
-
-        // 重なりがない場合は false を返す
-        return false;
-    }
-
-    /// <summary>
     /// オブジェクトを削除する処理
     /// </summary>
+    /// <param name="sceneView">現在のシーンビュー</param>
     private void OnDestroyObjectGUI(SceneView sceneView)
     {
         // グリッド線を描画
@@ -335,15 +339,18 @@ public class MapMaker : EditorWindow
     /// </summary>
     private void DrawGrid()
     {
+        // グリッド線の色を灰色に設定
         Handles.color = Color.gray;
         for (float x = -gridRange; x <= gridRange; x += gridSize)
         {
             for (float z = -gridRange; z <= gridRange; z += gridSize)
             {
+                // 水平方向のグリッド線を描画
                 Vector3 from = new Vector3(x, 0, z);
                 Vector3 to = new Vector3(x, 0, z + gridSize);
                 Handles.DrawLine(from, to);
 
+                // 垂直方向のグリッド線を描画
                 from = new Vector3(x + gridSize, 0, z);
                 to = new Vector3(x, 0, z);
                 Handles.DrawLine(from, to);
@@ -354,12 +361,29 @@ public class MapMaker : EditorWindow
     /// <summary>
     /// 制作中のステージの子オブジェクトを削除する
     /// </summary>
+    /// <param name="stageChild">削除対象のステージオブジェクトの親</param>
     private void DestroyStage(Transform stageChild)
     {
+        // 指定された親のすべての子オブジェクトを削除
         for (int i = stageChild.childCount - 1; i >= 0; i--)
         {
             Transform child = stageChild.GetChild(i);
             DestroyImmediate(child.gameObject);
         }
+    }
+
+    /// <summary>
+    /// Readmeボックスを表示する処理
+    /// </summary>
+    private void ReadmeBoxField()
+    {
+        EditorGUILayout.HelpBox(
+            "1. オブジェクトの配置が行えるように、Planeの生成を行う。（ステージの大きさによってサイズを調整）\n\n" +
+            "2. ステージのオブジェクトの選択する項目に、親オブジェクトとなるオブジェクトをアタッチする。\n\n" +
+            "3. 配置したいオブジェクトを設置オブジェクトの選択する項目にアタッチする。\n\n" +
+            "4. オブジェクトのサイズや合わせてグリッド線の調整を行う。\n\n" +
+            "5. オブジェクトのサイズとグリッド線の調整が完了後、「オブジェクト設置モード」のボタンを押す。\n\n" +
+            "6. 配置したい場所に合わせてマウスを左クリックで設置を行う。",
+            MessageType.None);
     }
 }
