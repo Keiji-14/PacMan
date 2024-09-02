@@ -117,11 +117,6 @@ public class MapMaker : EditorWindow
             // ここにReadmeの具体的なコンテンツを記述します。
         }
 
-        if (isSetObjectMethod)
-        {
-            SetObjectRotation();
-        }
-
         // プレビューオブジェクトのサイズを反映
         UpdatePreviewObjectScale();
 
@@ -194,22 +189,23 @@ public class MapMaker : EditorWindow
     /// </summary>
     private void SetObjectRotation()
     {
+        var currentRotation = objectPlacementRotation;
+
         if (isSetObjectMethod && Event.current.type == EventType.KeyDown)
         {
             if (Event.current.keyCode == KeyCode.A)
             {
                 objectPlacementRotation *= Quaternion.Euler(0f, -90f, 0f);
                 Event.current.Use();
-                Debug.Log(objectPlacementRotation);
             }
 
             if (Event.current.keyCode == KeyCode.D)
             {
                 objectPlacementRotation *= Quaternion.Euler(0f, 90f, 0f);
                 Event.current.Use();
-                Debug.Log(objectPlacementRotation);
             }
 
+            // 回転を適用
             if (previewObject != null)
             {
                 previewObject.transform.rotation = objectPlacementRotation;
@@ -259,15 +255,15 @@ public class MapMaker : EditorWindow
 
     private void SetPreviewPosition(SceneView sceneView)
     {
-        // ワールド座標をスクリーン座標に変換
-        Vector3 screenPosition = sceneView.camera.WorldToScreenPoint(objectPlacementPosition);
-
         // 座標確認UIの位置を右下に指定
         Vector2 guiPosition = new Vector2(sceneView.position.width - 70, sceneView.position.height - 150);
 
         // 座標を表示するテキストのスタイル
         GUIStyle textStyle = new GUIStyle();
         textStyle.normal.textColor = Color.white;
+
+        // 回転をオイラー角に変換
+        Vector3 rotationEulerAngles = objectPlacementRotation.eulerAngles;
 
         // 座標を表示
         Handles.BeginGUI();
@@ -277,9 +273,9 @@ public class MapMaker : EditorWindow
             "\nY: " + objectPlacementPosition.y.ToString("F2") + 
             "\nZ: " + objectPlacementPosition.z.ToString("F2") +
             "\nRotation:" +
-            "\nX: " + objectPlacementRotation.x.ToString("F2") +
-            "\nY: " + objectPlacementRotation.y.ToString("F2") +
-            "\nZ: " + objectPlacementRotation.z.ToString("F2"), textStyle);
+            "\nX: " + rotationEulerAngles.x.ToString("F2") +
+            "\nY: " + rotationEulerAngles.y.ToString("F2") +
+            "\nZ: " + rotationEulerAngles.z.ToString("F2"), textStyle);
             
         Handles.EndGUI();
     }
